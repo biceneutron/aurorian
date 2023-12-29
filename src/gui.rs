@@ -4,7 +4,7 @@ use specs::prelude::*;
 use crate::MAP_WIDTH;
 
 use super::{
-    components::*, Map, RunState, State, MAP_HEIGHT, MAP_PADDING_LEFT, MAP_PADDING_UP,
+    components::*, Map, Rect, RunState, State, MAP_HEIGHT, MAP_PADDING_LEFT, MAP_PADDING_UP,
     WINDOW_HEIGHT, WINDOW_WIDTH,
 };
 use std::cmp::{max, min};
@@ -151,16 +151,8 @@ pub fn draw_construction_menu(ecs: &mut World, ctx: &mut Rltk) -> ConstructionMe
 #[derive(PartialEq, Copy, Clone)]
 pub enum ConstructionSpotSelectingResult {
     Escape,
-    NoSelection {
-        selected_idx: usize,
-        x: usize,
-        y: usize,
-    },
-    Selected {
-        selected_idx: usize,
-        x: usize,
-        y: usize,
-    },
+    NoSelection { selected_idx: usize, x: i32, y: i32 },
+    Selected { selected_idx: usize, x: i32, y: i32 },
 }
 
 pub fn draw_construction_spot(ecs: &mut World, ctx: &mut Rltk) -> ConstructionSpotSelectingResult {
@@ -171,11 +163,25 @@ pub fn draw_construction_spot(ecs: &mut World, ctx: &mut Rltk) -> ConstructionSp
         let w = 5;
         let h = 5;
 
-        // #TODO do intersection check
+        let mut valid = true;
+        let target_spot = Rect::new(x, y, w, h);
+        let buildings_storage = ecs.read_storage::<Building>();
+        for building in buildings_storage.join() {
+            if target_spot.intersect(&building.rect) {
+                valid = false;
+                break;
+            }
+        }
 
+        // draw the spot
+        let spot_color = if valid {
+            RGB::named(rltk::GREEN)
+        } else {
+            RGB::named(rltk::RED)
+        };
         for i in x..x + w {
             for j in y..y + h {
-                ctx.set_bg(i, j, RGB::named(rltk::GREEN));
+                ctx.set_bg(i, j, spot_color);
             }
         }
 
@@ -185,6 +191,9 @@ pub fn draw_construction_spot(ecs: &mut World, ctx: &mut Rltk) -> ConstructionSp
             Some(key) => match key {
                 VirtualKeyCode::Escape => return ConstructionSpotSelectingResult::Escape,
                 VirtualKeyCode::Return => {
+                    if !valid {
+                        return ConstructionSpotSelectingResult::NoSelection { selected_idx, x, y };
+                    }
                     for i in x..x + w {
                         for j in y..y + h {
                             ctx.set_bg(i, j, RGB::named(rltk::BLACK));
@@ -197,27 +206,27 @@ pub fn draw_construction_spot(ecs: &mut World, ctx: &mut Rltk) -> ConstructionSp
                     return ConstructionSpotSelectingResult::NoSelection {
                         selected_idx,
                         x,
-                        y: max(y - 1, MAP_PADDING_UP),
+                        y: max(y - 1, MAP_PADDING_UP as i32),
                     }
                 }
                 VirtualKeyCode::J => {
                     return ConstructionSpotSelectingResult::NoSelection {
                         selected_idx,
                         x,
-                        y: min(y + 1, MAP_PADDING_UP + MAP_HEIGHT - h),
+                        y: min(y + 1, MAP_PADDING_UP as i32 + MAP_HEIGHT as i32 - h),
                     }
                 }
                 VirtualKeyCode::H => {
                     return ConstructionSpotSelectingResult::NoSelection {
                         selected_idx,
-                        x: max(x - 1, MAP_PADDING_LEFT),
+                        x: max(x - 1, MAP_PADDING_LEFT as i32),
                         y,
                     }
                 }
                 VirtualKeyCode::L => {
                     return ConstructionSpotSelectingResult::NoSelection {
                         selected_idx,
-                        x: min(x + 1, MAP_PADDING_LEFT + MAP_WIDTH - w),
+                        x: min(x + 1, MAP_PADDING_LEFT as i32 + MAP_WIDTH as i32 - w),
                         y,
                     }
                 }

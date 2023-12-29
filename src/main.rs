@@ -30,14 +30,8 @@ pub const WINDOW_WIDTH: usize = 150;
 pub enum RunState {
     PreRun,
     Idle,
-    ConstructionMenu {
-        selected_idx: usize,
-    },
-    ConstructionSpotSelecting {
-        selected_idx: usize,
-        x: usize,
-        y: usize,
-    },
+    ConstructionMenu { selected_idx: usize },
+    ConstructionSpotSelecting { selected_idx: usize, x: i32, y: i32 },
 }
 
 pub struct State {
@@ -87,8 +81,8 @@ impl GameState for State {
                         // new_runstate = RunState::Idle
                         new_runstate = RunState::ConstructionSpotSelecting {
                             selected_idx,
-                            x: WINDOW_WIDTH / 2,
-                            y: WINDOW_HEIGHT / 2,
+                            x: WINDOW_WIDTH as i32 / 2,
+                            y: WINDOW_HEIGHT as i32 / 2,
                         };
                     }
                     gui::ConstructionMenuResult::NoSelection { selected_idx } => {
