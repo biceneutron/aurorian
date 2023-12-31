@@ -1,7 +1,8 @@
 use rltk::{Console, Point, Rltk, VirtualKeyCode, RGB};
+use serde::de;
 use specs::prelude::*;
 
-use crate::MAP_WIDTH;
+use crate::{BuildingDetail, ConstructionManifest, MAP_WIDTH};
 
 use super::{
     components::*, Map, Rect, RunState, State, MAP_HEIGHT, MAP_PADDING_LEFT, MAP_PADDING_UP,
@@ -62,8 +63,7 @@ pub enum ConstructionMenuResult {
 }
 
 pub fn draw_construction_menu(ecs: &mut World, ctx: &mut Rltk) -> ConstructionMenuResult {
-    let mock_building_list = vec!["Mill", "Playground", "Yard", "Farm", "Power Plant"];
-    // let mock_building_list: Vec<&str> = vec![];
+    let construction_manifest = ecs.fetch::<ConstructionManifest>();
 
     let runstate = *ecs.fetch::<RunState>();
     if let RunState::ConstructionMenu { mut selected_idx } = runstate {
@@ -90,7 +90,7 @@ pub fn draw_construction_menu(ecs: &mut World, ctx: &mut Rltk) -> ConstructionMe
             "ESCAPE to cancel",
         );
 
-        if mock_building_list.is_empty() {
+        if construction_manifest.buildings.is_empty() {
             // control
             match ctx.key {
                 None => return ConstructionMenuResult::NoSelection { selected_idx },
@@ -102,14 +102,14 @@ pub fn draw_construction_menu(ecs: &mut World, ctx: &mut Rltk) -> ConstructionMe
         }
 
         // draw construction options
-        for (idx, &building) in mock_building_list.iter().enumerate() {
+        for (idx, building) in construction_manifest.buildings.iter().enumerate() {
             if selected_idx == idx {
                 ctx.print_color(
                     CONSTRUCTION_MENU_X + 2,
                     CONSTRUCTION_MENU_Y + 2 + idx,
                     RGB::named(rltk::MAGENTA),
                     RGB::named(rltk::BLACK),
-                    building,
+                    &building.name,
                 );
             } else {
                 ctx.print_color(
@@ -117,7 +117,7 @@ pub fn draw_construction_menu(ecs: &mut World, ctx: &mut Rltk) -> ConstructionMe
                     CONSTRUCTION_MENU_Y + 2 + idx,
                     RGB::named(rltk::WHITE),
                     RGB::named(rltk::BLACK),
-                    building,
+                    &building.name,
                 );
             }
         }
@@ -130,14 +130,14 @@ pub fn draw_construction_menu(ecs: &mut World, ctx: &mut Rltk) -> ConstructionMe
                 VirtualKeyCode::Return => return ConstructionMenuResult::Selected { selected_idx },
                 VirtualKeyCode::K => {
                     if selected_idx == 0 {
-                        selected_idx = mock_building_list.len() - 1;
+                        selected_idx = construction_manifest.buildings.len() - 1;
                     } else {
                         selected_idx -= 1;
                     }
                     return ConstructionMenuResult::NoSelection { selected_idx };
                 }
                 VirtualKeyCode::J => {
-                    selected_idx = (selected_idx + 1) % mock_building_list.len();
+                    selected_idx = (selected_idx + 1) % construction_manifest.buildings.len();
                     return ConstructionMenuResult::NoSelection { selected_idx };
                 }
                 _ => return ConstructionMenuResult::NoSelection { selected_idx },
@@ -159,12 +159,10 @@ pub fn draw_construction_spot(ecs: &mut World, ctx: &mut Rltk) -> ConstructionSp
     let runstate = *ecs.fetch::<RunState>();
 
     if let RunState::ConstructionSpotSelecting { selected_idx, x, y } = runstate {
-        // #TODO get building w and h
-        let w = 5;
-        let h = 5;
+        let detail = &ecs.fetch::<ConstructionManifest>().buildings[selected_idx];
 
         let mut valid = true;
-        let target_spot = Rect::new(x, y, w, h);
+        let target_spot = Rect::new(x, y, detail.width, detail.height);
         let buildings_storage = ecs.read_storage::<Building>();
         for building in buildings_storage.join() {
             if target_spot.intersect(&building.rect) {
@@ -179,8 +177,8 @@ pub fn draw_construction_spot(ecs: &mut World, ctx: &mut Rltk) -> ConstructionSp
         } else {
             RGB::named(rltk::RED)
         };
-        for i in x..x + w {
-            for j in y..y + h {
+        for i in x..x + detail.width {
+            for j in y..y + detail.height {
                 ctx.set_bg(i, j, spot_color);
             }
         }
@@ -194,8 +192,8 @@ pub fn draw_construction_spot(ecs: &mut World, ctx: &mut Rltk) -> ConstructionSp
                     if !valid {
                         return ConstructionSpotSelectingResult::NoSelection { selected_idx, x, y };
                     }
-                    for i in x..x + w {
-                        for j in y..y + h {
+                    for i in x..x + detail.width {
+                        for j in y..y + detail.height {
                             ctx.set_bg(i, j, RGB::named(rltk::BLACK));
                         }
                     }
@@ -213,7 +211,10 @@ pub fn draw_construction_spot(ecs: &mut World, ctx: &mut Rltk) -> ConstructionSp
                     return ConstructionSpotSelectingResult::NoSelection {
                         selected_idx,
                         x,
-                        y: min(y + 1, MAP_PADDING_UP as i32 + MAP_HEIGHT as i32 - h),
+                        y: min(
+                            y + 1,
+                            MAP_PADDING_UP as i32 + MAP_HEIGHT as i32 - detail.height,
+                        ),
                     }
                 }
                 VirtualKeyCode::H => {
@@ -226,7 +227,10 @@ pub fn draw_construction_spot(ecs: &mut World, ctx: &mut Rltk) -> ConstructionSp
                 VirtualKeyCode::L => {
                     return ConstructionSpotSelectingResult::NoSelection {
                         selected_idx,
-                        x: min(x + 1, MAP_PADDING_LEFT as i32 + MAP_WIDTH as i32 - w),
+                        x: min(
+                            x + 1,
+                            MAP_PADDING_LEFT as i32 + MAP_WIDTH as i32 - detail.width,
+                        ),
                         y,
                     }
                 }

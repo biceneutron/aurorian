@@ -1,0 +1,64 @@
+{
+    "buildings": [
+        {
+            "name": "Mill",
+            "width": 5,
+            "height": 5,
+            "fg": "GOLD2",
+            "bg": "BLACK",
+            "glyph": "☼",
+            "levels": {
+                "0": {
+                    "rate": 2
+                },
+                "1": {
+                    "rate": 8,
+                    "requirements": {
+                        "current_building_level": 0,
+                        "food": 100
+                    }
+                }
+            }
+        },
+        {
+            "name": "Food Factory",
+            "width": 6,
+            "height": 6,
+            "fg": "LIME",
+            "bg": "BLACK",
+            "glyph": "o",
+            "levels": {
+                "0": {
+                    "rate": 5
+                },
+                "1": {
+                    "rate": 8,
+                    "requirements": {
+                        "current_building_level": 0,
+                        "food": 100
+                    }
+                }
+            }
+        },
+        {
+            "name": "Army",
+            "width": 10,
+            "height": 10,
+            "fg": "RED",
+            "bg": "BLACK",
+            "glyph": "x",
+            "levels": {
+                "0": {
+                    "rate": 1
+                },
+                "1": {
+                    "rate": 8,
+                    "requirements": {
+                        "current_building_level": 0,
+                        "food": 100
+                    }
+                }
+            }
+        }
+    ]
+}

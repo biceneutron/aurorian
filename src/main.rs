@@ -5,10 +5,19 @@ use resource_system::ResourceSystem;
 use rltk::{GameState, Point, Rltk, RGB};
 use specs::prelude::*;
 use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
+use std::collections::{hash_map, HashMap};
 use std::time::Duration;
 
 use crate::map::Map;
 use rand::Rng;
+
+// serde
+use serde::Deserialize;
+
+use std::error::Error;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
 
 mod components;
 mod map;
@@ -22,6 +31,7 @@ mod control;
 mod render;
 mod resource_system;
 mod spawner;
+mod utils;
 
 pub const WINDOW_HEIGHT: usize = 100;
 pub const WINDOW_WIDTH: usize = 150;
@@ -91,14 +101,14 @@ impl GameState for State {
                     gui::ConstructionMenuResult::Escape => new_runstate = RunState::Idle,
                 }
             }
-            RunState::ConstructionSpotSelecting { selected_idx, x, y } => {
+            RunState::ConstructionSpotSelecting { selected_idx, .. } => {
                 self.run_systems();
                 let result = gui::draw_construction_spot(&mut self.ecs, ctx);
                 match result {
                     gui::ConstructionSpotSelectingResult::Selected { selected_idx, x, y } => {
-                        // #TODO spawn building
-                        let rect = Rect::new(x as i32, y as i32, 5, 5);
-                        spawner::spawn_mill(&mut self.ecs, rect);
+                        let (detail, spawner_fn) =
+                            spawner::get_spawner(&mut self.ecs, selected_idx);
+                        spawner_fn(&mut self.ecs, detail, x, y);
                         new_runstate = RunState::Idle
                     }
                     gui::ConstructionSpotSelectingResult::NoSelection { selected_idx, x, y } => {
@@ -114,6 +124,38 @@ impl GameState for State {
         let mut runstate_writer = self.ecs.write_resource::<RunState>();
         *runstate_writer = new_runstate;
     }
+}
+
+// Constrction list
+#[derive(Deserialize, Debug)]
+pub struct ConstructionManifest {
+    pub buildings: Vec<BuildingDetail>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct BuildingDetail {
+    pub name: String,
+    pub width: i32,
+    pub height: i32,
+    pub fg: String,
+    pub bg: String,
+    pub glyph: char,
+    pub levels: HashMap<i32, LevelDetail>,
+}
+
+#[derive(Deserialize, Copy, Clone, Debug)]
+pub struct LevelDetail {
+    pub rate: Option<i32>,
+    pub requirements: Option<ConstructionRequirment>,
+}
+
+#[derive(Deserialize, Copy, Clone, Debug)]
+pub struct ConstructionRequirment {
+    pub current_player_level: Option<i32>,
+    pub current_building_level: Option<i32>,
+    pub food: Option<i32>,
+    pub wood: Option<i32>,
+    pub stone: Option<i32>,
 }
 
 fn main() -> rltk::BError {
@@ -160,6 +202,11 @@ fn main() -> rltk::BError {
     //     .with(FoodGenerator { rate: 2 })
     //     .build();
 
+    let file = File::open("src/constructions.json")?;
+    let reader = BufReader::new(file);
+    let construction_manifest = serde_json::from_reader::<_, ConstructionManifest>(reader)?;
+
+    gs.ecs.insert(construction_manifest);
     gs.ecs.insert(map);
     gs.ecs.insert(player_stats);
     gs.ecs.insert(RunState::PreRun);
