@@ -24,7 +24,9 @@ pub struct Map {
     pub tiles: Vec<TileType>,
     pub width: i32,
     pub height: i32,
-    pub blocked: Vec<bool>,
+    /// the coordinates of the left-top point of buildings on the map are
+    // marked as true
+    pub occupied: Vec<bool>,
 
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
@@ -37,34 +39,51 @@ impl Map {
             tiles: vec![TileType::Floor; MAP_COUNT],
             width: MAP_WIDTH as i32,
             height: MAP_HEIGHT as i32,
-            blocked: vec![false; MAP_COUNT],
+            occupied: vec![false; MAP_COUNT],
             tile_content: vec![Vec::new(); MAP_COUNT],
         }
     }
 
-    pub fn xy_idx(&self, x: i32, y: i32) -> usize {
+    pub fn xy_idx(&self, mut x: i32, mut y: i32) -> usize {
+        y -= MAP_PADDING_LEFT as i32;
+        x -= MAP_PADDING_RIGHT as i32;
+
+        if x < 0 || y < 0 {
+            panic!("Coordinates out of bound");
+        }
+
         (y as usize * self.width as usize) + x as usize
     }
 
-    fn is_exit_valid(&self, x: i32, y: i32) -> bool {
-        if x < 1 || x > self.width - 1 || y < 1 || y > self.height - 1 {
-            return false;
-        }
-        let idx = self.xy_idx(x, y);
-        !self.blocked[idx]
+    pub fn idx_xy(&self, idx: usize) -> (i32, i32) {
+        let x = idx % MAP_WIDTH;
+        let y = idx / MAP_WIDTH;
+
+        (
+            x as i32 + MAP_PADDING_LEFT as i32,
+            y as i32 + MAP_PADDING_UP as i32,
+        )
     }
 
-    pub fn populate_blocked(&mut self) {
-        for (i, tile) in self.tiles.iter_mut().enumerate() {
-            self.blocked[i] = *tile == TileType::Wall;
-        }
-    }
+    // fn is_exit_valid(&self, x: i32, y: i32) -> bool {
+    //     if x < 1 || x > self.width - 1 || y < 1 || y > self.height - 1 {
+    //         return false;
+    //     }
+    //     let idx = self.xy_idx(x, y);
+    //     !self.blocked[idx]
+    // }
 
-    pub fn clear_content_index(&mut self) {
-        for content in self.tile_content.iter_mut() {
-            content.clear();
-        }
-    }
+    // pub fn populate_blocked(&mut self) {
+    //     for (i, tile) in self.tiles.iter_mut().enumerate() {
+    //         self.blocked[i] = *tile == TileType::Wall;
+    //     }
+    // }
+
+    // pub fn clear_content_index(&mut self) {
+    //     for content in self.tile_content.iter_mut() {
+    //         content.clear();
+    //     }
+    // }
 }
 
 impl Algorithm2D for Map {
@@ -78,49 +97,49 @@ impl BaseMap for Map {
         self.tiles[idx as usize] == TileType::Wall
     }
 
-    fn get_available_exits(&self, idx: usize) -> rltk::SmallVec<[(usize, f32); 10]> {
-        let mut exits = rltk::SmallVec::new();
-        let x = idx as i32 % self.width;
-        let y = idx as i32 / self.width;
-        let w = self.width as usize;
+    // fn get_available_exits(&self, idx: usize) -> rltk::SmallVec<[(usize, f32); 10]> {
+    //     let mut exits = rltk::SmallVec::new();
+    //     let x = idx as i32 % self.width;
+    //     let y = idx as i32 / self.width;
+    //     let w = self.width as usize;
 
-        // Cardinal directions
-        if self.is_exit_valid(x - 1, y) {
-            exits.push((idx - 1, 1.0))
-        };
-        if self.is_exit_valid(x + 1, y) {
-            exits.push((idx + 1, 1.0))
-        };
-        if self.is_exit_valid(x, y - 1) {
-            exits.push((idx - w, 1.0))
-        };
-        if self.is_exit_valid(x, y + 1) {
-            exits.push((idx + w, 1.0))
-        };
+    //     // Cardinal directions
+    //     if self.is_exit_valid(x - 1, y) {
+    //         exits.push((idx - 1, 1.0))
+    //     };
+    //     if self.is_exit_valid(x + 1, y) {
+    //         exits.push((idx + 1, 1.0))
+    //     };
+    //     if self.is_exit_valid(x, y - 1) {
+    //         exits.push((idx - w, 1.0))
+    //     };
+    //     if self.is_exit_valid(x, y + 1) {
+    //         exits.push((idx + w, 1.0))
+    //     };
 
-        // Diagonals
-        if self.is_exit_valid(x - 1, y - 1) {
-            exits.push(((idx - w) - 1, 1.45));
-        }
-        if self.is_exit_valid(x + 1, y - 1) {
-            exits.push(((idx - w) + 1, 1.45));
-        }
-        if self.is_exit_valid(x - 1, y + 1) {
-            exits.push(((idx + w) - 1, 1.45));
-        }
-        if self.is_exit_valid(x + 1, y + 1) {
-            exits.push(((idx + w) + 1, 1.45));
-        }
+    //     // Diagonals
+    //     if self.is_exit_valid(x - 1, y - 1) {
+    //         exits.push(((idx - w) - 1, 1.45));
+    //     }
+    //     if self.is_exit_valid(x + 1, y - 1) {
+    //         exits.push(((idx - w) + 1, 1.45));
+    //     }
+    //     if self.is_exit_valid(x - 1, y + 1) {
+    //         exits.push(((idx + w) - 1, 1.45));
+    //     }
+    //     if self.is_exit_valid(x + 1, y + 1) {
+    //         exits.push(((idx + w) + 1, 1.45));
+    //     }
 
-        exits
-    }
+    //     exits
+    // }
 
-    fn get_pathing_distance(&self, idx1: usize, idx2: usize) -> f32 {
-        let w = self.width as usize;
-        let p1 = Point::new(idx1 % w, idx1 / w);
-        let p2 = Point::new(idx2 % w, idx2 / w);
-        rltk::DistanceAlg::Pythagoras.distance2d(p1, p2)
-    }
+    // fn get_pathing_distance(&self, idx1: usize, idx2: usize) -> f32 {
+    //     let w = self.width as usize;
+    //     let p1 = Point::new(idx1 % w, idx1 / w);
+    //     let p2 = Point::new(idx2 % w, idx2 / w);
+    //     rltk::DistanceAlg::Pythagoras.distance2d(p1, p2)
+    // }
 }
 
 pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
@@ -141,7 +160,7 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
         // Render a tile depending upon the tile type
 
         let glyph;
-        let mut fg;
+        let fg;
         match tile {
             TileType::Floor => {
                 glyph = rltk::to_cp437(' ');

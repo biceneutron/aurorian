@@ -18,6 +18,7 @@ pub struct Renderable {
 #[derive(Component, ConvertSaveload)]
 pub struct Building {
     pub rect: Rect,
+    pub level: i32,
 }
 
 #[derive(Component, ConvertSaveload, Debug)]

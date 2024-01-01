@@ -10,6 +10,7 @@ pub fn player_input(ecs: &mut World, ctx: &mut Rltk) -> RunState {
         Some(key) => match key {
             VirtualKeyCode::C => return RunState::ConstructionMenu { selected_idx: 0 },
 
+            VirtualKeyCode::S => return RunState::ConstructionSelecting { x: 0, y: 0 },
             _ => return RunState::Idle,
         },
     }

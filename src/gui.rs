@@ -2,7 +2,7 @@ use rltk::{Console, Point, Rltk, VirtualKeyCode, RGB};
 use serde::de;
 use specs::prelude::*;
 
-use crate::{BuildingDetail, ConstructionManifest, MAP_WIDTH};
+use crate::{BuildingDetail, ConstructionManifest, MAP_COUNT, MAP_WIDTH};
 
 use super::{
     components::*, Map, Rect, RunState, State, MAP_HEIGHT, MAP_PADDING_LEFT, MAP_PADDING_UP,
@@ -240,4 +240,134 @@ pub fn draw_construction_spot(ecs: &mut World, ctx: &mut Rltk) -> ConstructionSp
     }
 
     ConstructionSpotSelectingResult::Escape
+}
+
+pub enum ConstructionSelectingResult {
+    Escape,
+    NoSelection { x: i32, y: i32 },
+    Selected { selected_idx: usize, x: i32, y: i32 },
+}
+
+pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> ConstructionSelectingResult {
+    let runstate = *ecs.fetch::<RunState>();
+
+    if let RunState::ConstructionSelecting { mut x, mut y } = runstate {
+        let map = ecs.fetch::<Map>();
+        if x == 0 && y == 0 {
+            // searching for the first occupied tile
+            let mut idx = 0;
+            while idx < MAP_COUNT && !map.occupied[idx] {
+                idx += 1;
+            }
+
+            if idx == MAP_COUNT {
+                return ConstructionSelectingResult::Escape;
+            }
+
+            (x, y) = map.idx_xy(idx);
+        }
+
+        let building_storage = ecs.read_storage::<Building>();
+        for building in building_storage.join() {
+            if x == building.rect.x1 && y == building.rect.y1 {
+                // draw the spot
+                for i in building.rect.y1..building.rect.y2 {
+                    for j in building.rect.x1..building.rect.x2 {
+                        ctx.set_bg(j, i, RGB::named(rltk::SKY_BLUE));
+                    }
+                }
+            }
+        }
+
+        // control
+        match ctx.key {
+            None => return ConstructionSelectingResult::NoSelection { x, y },
+            Some(key) => match key {
+                VirtualKeyCode::Escape => return ConstructionSelectingResult::Escape,
+                //  VirtualKeyCode::Return => {
+                //      for i in building.rect.y1..building.rect.y2 + 1 {
+                //          for j in building.rect.x1..building.rect.x2 + 1 {
+                //              ctx.set_bg(i, j, RGB::named(rltk::BLACK));
+                //          }
+                //      }
+
+                //      return ConstructionSpotSelectingResult::Selected { selected_idx, x, y };
+                //  }
+                VirtualKeyCode::K => {
+                    if y == 0 {
+                        return ConstructionSelectingResult::NoSelection { x, y };
+                    }
+
+                    let mut idx = map.xy_idx(x, y - 1);
+
+                    loop {
+                        if map.occupied[idx] {
+                            let (x, y) = map.idx_xy(idx);
+                            return ConstructionSelectingResult::NoSelection { x, y };
+                        }
+
+                        if idx == 0 {
+                            break;
+                        }
+
+                        idx -= 1
+                    }
+
+                    return ConstructionSelectingResult::NoSelection { x, y };
+                }
+                VirtualKeyCode::J => {
+                    let map = ecs.fetch::<Map>();
+                    if y == (MAP_PADDING_UP + MAP_HEIGHT - 1) as i32 {
+                        return ConstructionSelectingResult::NoSelection { x, y };
+                    }
+
+                    let mut idx = map.xy_idx(x, y + 1 as i32);
+
+                    while idx < MAP_COUNT {
+                        if map.occupied[idx] {
+                            let (x, y) = map.idx_xy(idx);
+                            return ConstructionSelectingResult::NoSelection { x, y };
+                        }
+                        idx += 1;
+                    }
+
+                    return ConstructionSelectingResult::NoSelection { x, y };
+                }
+                VirtualKeyCode::H => {
+                    let map = ecs.fetch::<Map>();
+                    let mut idx = map.xy_idx(x, y) - 1;
+                    loop {
+                        if map.occupied[idx] {
+                            let (x, y) = map.idx_xy(idx);
+                            return ConstructionSelectingResult::NoSelection { x, y };
+                        }
+
+                        if idx == 0 {
+                            break;
+                        }
+
+                        idx -= 1;
+                    }
+
+                    return ConstructionSelectingResult::NoSelection { x, y };
+                }
+                VirtualKeyCode::L => {
+                    let map = ecs.fetch::<Map>();
+                    let mut idx = map.xy_idx(x, y) + 1;
+                    while idx < MAP_COUNT {
+                        if map.occupied[idx] {
+                            let (x, y) = map.idx_xy(idx);
+                            return ConstructionSelectingResult::NoSelection { x, y };
+                        }
+                        idx += 1;
+                    }
+
+                    return ConstructionSelectingResult::NoSelection { x, y };
+                }
+                _ => return ConstructionSelectingResult::NoSelection { x, y },
+            },
+        }
+    }
+
+    ConstructionSelectingResult::Escape
 }

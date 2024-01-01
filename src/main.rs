@@ -42,6 +42,7 @@ pub enum RunState {
     Idle,
     ConstructionMenu { selected_idx: usize },
     ConstructionSpotSelecting { selected_idx: usize, x: i32, y: i32 },
+    ConstructionSelecting { x: i32, y: i32 },
 }
 
 pub struct State {
@@ -116,6 +117,21 @@ impl GameState for State {
                     }
                     gui::ConstructionSpotSelectingResult::Escape => {
                         new_runstate = RunState::ConstructionMenu { selected_idx }
+                    }
+                }
+            }
+            RunState::ConstructionSelecting { x, y } => {
+                self.run_systems();
+                let result = gui::draw_construction_selecting(&mut self.ecs, ctx);
+                match result {
+                    gui::ConstructionSelectingResult::Selected { .. } => {
+                        new_runstate = RunState::Idle;
+                    }
+                    gui::ConstructionSelectingResult::NoSelection { x, y } => {
+                        new_runstate = RunState::ConstructionSelecting { x, y };
+                    }
+                    gui::ConstructionSelectingResult::Escape => {
+                        new_runstate = RunState::Idle;
                     }
                 }
             }
