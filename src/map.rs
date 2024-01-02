@@ -45,8 +45,8 @@ impl Map {
     }
 
     pub fn xy_idx(&self, mut x: i32, mut y: i32) -> usize {
-        y -= MAP_PADDING_LEFT as i32;
-        x -= MAP_PADDING_RIGHT as i32;
+        y -= MAP_PADDING_UP as i32;
+        x -= MAP_PADDING_LEFT as i32;
 
         if x < 0 || y < 0 {
             panic!("Coordinates out of bound");

@@ -5,8 +5,8 @@ use specs::prelude::*;
 use crate::{BuildingDetail, ConstructionManifest, MAP_COUNT, MAP_WIDTH};
 
 use super::{
-    components::*, Map, Rect, RunState, State, MAP_HEIGHT, MAP_PADDING_LEFT, MAP_PADDING_UP,
-    WINDOW_HEIGHT, WINDOW_WIDTH,
+    components::*, Map, Rect, RunState, State, MAP_HEIGHT, MAP_PADDING_BOTTOM, MAP_PADDING_LEFT,
+    MAP_PADDING_UP, WINDOW_HEIGHT, WINDOW_WIDTH,
 };
 use std::cmp::{max, min};
 
@@ -14,6 +14,8 @@ pub const UIBOX_X: usize = 0;
 pub const UIBOX_Y: usize = MAP_PADDING_UP + MAP_HEIGHT + 1;
 pub const UIBOX_WIDTH: usize = WINDOW_WIDTH - 1;
 pub const UIBOX_HEIGHT: usize = WINDOW_HEIGHT - MAP_PADDING_UP - MAP_HEIGHT - 2;
+pub const CONSTRUCTION_INFO_WIDTH: usize = 20;
+pub const CONSTRUCTION_INFO_HEIGHT: usize = 20;
 
 pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
     ctx.draw_box(
@@ -192,11 +194,11 @@ pub fn draw_construction_spot(ecs: &mut World, ctx: &mut Rltk) -> ConstructionSp
                     if !valid {
                         return ConstructionSpotSelectingResult::NoSelection { selected_idx, x, y };
                     }
-                    for i in x..x + detail.width {
-                        for j in y..y + detail.height {
-                            ctx.set_bg(i, j, RGB::named(rltk::BLACK));
-                        }
-                    }
+                    // for i in x..x + detail.width {
+                    //     for j in y..y + detail.height {
+                    //         ctx.set_bg(i, j, RGB::named(rltk::BLACK));
+                    //     }
+                    // }
 
                     return ConstructionSpotSelectingResult::Selected { selected_idx, x, y };
                 }
@@ -268,7 +270,10 @@ pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> Construct
         }
 
         let building_storage = ecs.read_storage::<Building>();
-        for building in building_storage.join() {
+        let name_storage = ecs.read_storage::<Name>();
+        let generator_storage = ecs.read_storage::<Generator>();
+        let entities = ecs.entities();
+        for (building, name, entity) in (&building_storage, &name_storage, &entities).join() {
             if x == building.rect.x1 && y == building.rect.y1 {
                 // draw the spot
                 for i in building.rect.y1..building.rect.y2 {
@@ -276,6 +281,10 @@ pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> Construct
                         ctx.set_bg(j, i, RGB::named(rltk::SKY_BLUE));
                     }
                 }
+
+                // draw building info and action menu
+                let generator = generator_storage.get(entity);
+                draw_construction_info(ctx, building, name, generator);
             }
         }
 
@@ -294,7 +303,7 @@ pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> Construct
                 //      return ConstructionSpotSelectingResult::Selected { selected_idx, x, y };
                 //  }
                 VirtualKeyCode::K => {
-                    if y == 0 {
+                    if y == MAP_PADDING_UP as i32 {
                         return ConstructionSelectingResult::NoSelection { x, y };
                     }
 
@@ -335,7 +344,12 @@ pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> Construct
                 }
                 VirtualKeyCode::H => {
                     let map = ecs.fetch::<Map>();
-                    let mut idx = map.xy_idx(x, y) - 1;
+                    let mut idx = map.xy_idx(x, y);
+                    if idx == 0 {
+                        return ConstructionSelectingResult::NoSelection { x, y };
+                    }
+                    idx -= 1;
+
                     loop {
                         if map.occupied[idx] {
                             let (x, y) = map.idx_xy(idx);
@@ -370,4 +384,76 @@ pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> Construct
     }
 
     ConstructionSelectingResult::Escape
+}
+
+fn draw_construction_info(
+    ctx: &mut Rltk,
+    building: &Building,
+    name: &Name,
+    generator: Option<&Generator>,
+) {
+    let mut info_x = building.rect.x2;
+    if info_x + CONSTRUCTION_INFO_WIDTH as i32 >= (MAP_PADDING_LEFT + MAP_WIDTH) as i32 {
+        info_x = building.rect.x1 - 1 - CONSTRUCTION_INFO_WIDTH as i32;
+    }
+    let mut info_y = building.rect.y1;
+    if info_y + CONSTRUCTION_INFO_HEIGHT as i32 >= (WINDOW_HEIGHT - MAP_PADDING_BOTTOM) as i32 {
+        info_y = info_y
+            - (info_y + CONSTRUCTION_INFO_HEIGHT as i32 - WINDOW_HEIGHT as i32
+                + MAP_PADDING_BOTTOM as i32);
+    }
+    ctx.draw_box(
+        info_x,
+        info_y,
+        CONSTRUCTION_INFO_WIDTH,
+        CONSTRUCTION_INFO_HEIGHT,
+        RGB::named(rltk::WHITE),
+        RGB::named(rltk::BLACK),
+    );
+
+    // construction name
+    ctx.print_color(
+        info_x + 1,
+        info_y + 1,
+        RGB::named(rltk::WHITE),
+        RGB::named(rltk::BLACK),
+        name.name.clone(),
+    );
+    ctx.draw_hollow_box(
+        info_x,
+        info_y + 2,
+        CONSTRUCTION_INFO_WIDTH,
+        0,
+        RGB::named(rltk::WHITE),
+        RGB::named(rltk::BLACK),
+    );
+
+    // rate
+    if let Some(gen) = generator {
+        let rate_info;
+        match gen.resource_type {
+            ResourceType::Food => {
+                rate_info = format!("Food Rate: +{}/sec", gen.rate);
+            }
+            _ => {
+                rate_info = "?".to_string();
+            }
+        }
+
+        ctx.print_color(
+            info_x + 1,
+            info_y + 3,
+            RGB::named(rltk::WHITE),
+            RGB::named(rltk::BLACK),
+            rate_info,
+        );
+        ctx.draw_hollow_box(
+            info_x,
+            info_y + 4,
+            CONSTRUCTION_INFO_WIDTH,
+            0,
+            RGB::named(rltk::WHITE),
+            RGB::named(rltk::BLACK),
+        );
+    }
 }
