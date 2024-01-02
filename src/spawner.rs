@@ -42,8 +42,9 @@ pub fn spawn_mill(ecs: &mut World, detail: BuildingDetail, x: i32, y: i32) {
             render_order: 0,
         })
         .with(Building { rect, level: 0 })
-        .with(FoodGenerator {
+        .with(Generator {
             rate: detail.levels.get(&0).unwrap().rate.unwrap(),
+            resource_type: ResourceType::Food,
         })
         .with(Name {
             name: detail.name.to_string(),
@@ -67,8 +68,9 @@ pub fn spawn_food_factory(ecs: &mut World, detail: BuildingDetail, x: i32, y: i3
             render_order: 0,
         })
         .with(Building { rect, level: 0 })
-        .with(FoodGenerator {
+        .with(Generator {
             rate: detail.levels.get(&0).unwrap().rate.unwrap(),
+            resource_type: ResourceType::Food,
         })
         .with(Name {
             name: detail.name.to_string(),

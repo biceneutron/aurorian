@@ -34,7 +34,15 @@ pub struct PlayerStats {
     pub next_refresh: i64,         // second
 }
 
+#[derive(PartialEq, Serialize, Deserialize, Copy, Clone)]
+pub enum ResourceType {
+    Food,
+    Stone,
+    Wood,
+}
+
 #[derive(Component, ConvertSaveload)]
-pub struct FoodGenerator {
-    pub rate: i32, // food/sec
+pub struct Generator {
+    pub rate: i32, // per sec
+    pub resource_type: ResourceType,
 }

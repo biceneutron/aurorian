@@ -183,7 +183,7 @@ fn main() -> rltk::BError {
     let mut gs = State { ecs: World::new() };
 
     gs.ecs.register::<PlayerStats>();
-    gs.ecs.register::<FoodGenerator>();
+    gs.ecs.register::<Generator>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Building>();
     gs.ecs.register::<Name>();
