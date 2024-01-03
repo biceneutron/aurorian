@@ -1,7 +1,7 @@
 {
     "buildings": [
         {
-            "name": "Mill",
+            "name": "Farm",
             "width": 5,
             "height": 5,
             "fg": "GOLD2",
@@ -50,6 +50,46 @@
             "levels": {
                 "0": {
                     "rate": 1
+                },
+                "1": {
+                    "rate": 8,
+                    "requirements": {
+                        "current_building_level": 0,
+                        "food": 100
+                    }
+                }
+            }
+        },
+        {
+            "name": "Lumber Camp",
+            "width": 5,
+            "height": 5,
+            "fg": "GOLD2",
+            "bg": "BLACK",
+            "glyph": "╣",
+            "levels": {
+                "0": {
+                    "rate": 2
+                },
+                "1": {
+                    "rate": 8,
+                    "requirements": {
+                        "current_building_level": 0,
+                        "food": 100
+                    }
+                }
+            }
+        },
+        {
+            "name": "Mining Camp",
+            "width": 5,
+            "height": 5,
+            "fg": "GOLD2",
+            "bg": "BLACK",
+            "glyph": "■",
+            "levels": {
+                "0": {
+                    "rate": 2
                 },
                 "1": {
                     "rate": 8,

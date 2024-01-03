@@ -28,10 +28,17 @@ pub struct Name {
 
 #[derive(Component, ConvertSaveload)]
 pub struct PlayerStats {
-    pub food_amount: i32,
-    pub food_amount_max: i32,
-    pub food_generation_rate: i32, // total food/sec
-    pub next_refresh: i64,         // second
+    pub food: ResourceInfo,
+    pub wood: ResourceInfo,
+    pub stone: ResourceInfo,
+    pub next_refresh: i64, // second
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ResourceInfo {
+    pub amount: i32,
+    pub max_amount: i32,
+    pub rate: i32, // per sec
 }
 
 #[derive(PartialEq, Serialize, Deserialize, Copy, Clone)]

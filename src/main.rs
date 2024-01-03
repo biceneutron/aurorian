@@ -196,9 +196,21 @@ fn main() -> rltk::BError {
         .ecs
         .create_entity()
         .with(PlayerStats {
-            food_amount: 0,
-            food_amount_max: 10000,
-            food_generation_rate: 0,
+            food: ResourceInfo {
+                amount: 0,
+                max_amount: 10000,
+                rate: 0,
+            },
+            wood: ResourceInfo {
+                amount: 0,
+                max_amount: 10000,
+                rate: 0,
+            },
+            stone: ResourceInfo {
+                amount: 0,
+                max_amount: 10000,
+                rate: 0,
+            },
             next_refresh: current.timestamp() - 1,
         })
         .build();

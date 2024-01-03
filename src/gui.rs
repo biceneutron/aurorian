@@ -33,14 +33,24 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
 
     let runstate = *ecs.read_resource::<RunState>();
     let food_stats;
+    let wood_stats;
+    let stone_stats;
     if runstate == RunState::PreRun {
-        food_stats = format!("Food: - / - (-/sec)");
+        food_stats = format!("Food:  - / - (-/sec)");
+        wood_stats = format!("Wood:  - / - (-/sec)");
+        stone_stats = format!("Stone: - / - (-/sec)");
     } else {
         food_stats = format!(
-            "Food: {} / {} (+{}/sec)",
-            player_stats.food_amount,
-            player_stats.food_amount_max,
-            player_stats.food_generation_rate
+            "Food:  {} / {} (+{}/sec)",
+            player_stats.food.amount, player_stats.food.max_amount, player_stats.food.rate
+        );
+        wood_stats = format!(
+            "Wood:  {} / {} (+{}/sec)",
+            player_stats.wood.amount, player_stats.wood.max_amount, player_stats.wood.rate
+        );
+        stone_stats = format!(
+            "Stone: {} / {} (+{}/sec)",
+            player_stats.stone.amount, player_stats.stone.max_amount, player_stats.stone.rate
         );
     }
 
@@ -50,6 +60,20 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
         RGB::named(rltk::YELLOW),
         RGB::named(rltk::BLACK),
         &food_stats,
+    );
+    ctx.print_color(
+        UIBOX_X + 1,
+        UIBOX_Y + 2,
+        RGB::named(rltk::YELLOW),
+        RGB::named(rltk::BLACK),
+        &wood_stats,
+    );
+    ctx.print_color(
+        UIBOX_X + 1,
+        UIBOX_Y + 3,
+        RGB::named(rltk::YELLOW),
+        RGB::named(rltk::BLACK),
+        &stone_stats,
     );
 }
 
