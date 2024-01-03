@@ -297,6 +297,7 @@ pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> Construct
         let name_storage = ecs.read_storage::<Name>();
         let generator_storage = ecs.read_storage::<Generator>();
         let entities = ecs.entities();
+        let building_manifest = ecs.fetch::<ConstructionManifest>();
         for (building, name, entity) in (&building_storage, &name_storage, &entities).join() {
             if x == building.rect.x1 && y == building.rect.y1 {
                 // draw the spot
@@ -307,8 +308,20 @@ pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> Construct
                 }
 
                 // draw building info and action menu
+                let mut detail = None;
+                for b in &building_manifest.buildings {
+                    if b.name == name.name {
+                        detail = Some(b);
+                    }
+                }
                 let generator = generator_storage.get(entity);
-                draw_construction_info(ctx, building, name, generator);
+                draw_construction_info(
+                    ctx,
+                    building,
+                    name,
+                    generator,
+                    detail.expect("Building must have detail"),
+                );
             }
         }
 
@@ -415,6 +428,7 @@ fn draw_construction_info(
     building: &Building,
     name: &Name,
     generator: Option<&Generator>,
+    detail: &BuildingDetail,
 ) {
     let mut info_x = building.rect.x2;
     if info_x + CONSTRUCTION_INFO_WIDTH as i32 >= (MAP_PADDING_LEFT + MAP_WIDTH) as i32 {
@@ -452,32 +466,141 @@ fn draw_construction_info(
         RGB::named(rltk::BLACK),
     );
 
+    // level
+    ctx.print_color(
+        info_x + 1,
+        info_y + 3,
+        RGB::named(rltk::WHITE),
+        RGB::named(rltk::BLACK),
+        format!("Level: {}", building.level),
+    );
+
     // rate
     if let Some(gen) = generator {
         let rate_info;
         match gen.resource_type {
             ResourceType::Food => {
-                rate_info = format!("Food Rate: +{}/sec", gen.rate);
+                rate_info = format!("Food: +{}/sec", gen.rate);
             }
-            _ => {
-                rate_info = "?".to_string();
+            ResourceType::Wood => {
+                rate_info = format!("Wood: +{}/sec", gen.rate);
+            }
+            ResourceType::Stone => {
+                rate_info = format!("Stone: +{}/sec", gen.rate);
             }
         }
 
         ctx.print_color(
             info_x + 1,
-            info_y + 3,
+            info_y + 4,
             RGB::named(rltk::WHITE),
             RGB::named(rltk::BLACK),
             rate_info,
         );
+    }
+
+    // actions
+    let action_line_y = info_y + CONSTRUCTION_INFO_HEIGHT as i32 - 3;
+    ctx.draw_hollow_box(
+        info_x,
+        action_line_y,
+        CONSTRUCTION_INFO_WIDTH,
+        0,
+        RGB::named(rltk::WHITE),
+        RGB::named(rltk::BLACK),
+    );
+    ctx.print_color(
+        info_x + 1,
+        action_line_y + 1,
+        RGB::named(rltk::WHITE),
+        RGB::named(rltk::BLACK),
+        format!("[u] Upgrade"),
+    );
+    ctx.print_color(
+        info_x + 1,
+        action_line_y + 2,
+        RGB::named(rltk::WHITE),
+        RGB::named(rltk::BLACK),
+        format!("[t] Tear down"),
+    );
+
+    // upgrade requirements
+    let next_level = building.level + 1;
+    if next_level < detail.levels.len() as i32 {
+        let requirement_line_y = action_line_y - 5;
         ctx.draw_hollow_box(
             info_x,
-            info_y + 4,
+            requirement_line_y,
             CONSTRUCTION_INFO_WIDTH,
             0,
             RGB::named(rltk::WHITE),
             RGB::named(rltk::BLACK),
         );
+        if let Some(rate) = detail.levels[&next_level].rate {
+            ctx.print_color(
+                info_x + 1,
+                requirement_line_y,
+                RGB::named(rltk::WHITE),
+                RGB::named(rltk::BLACK),
+                format!("Next Level:+{}/sec", rate),
+            );
+        }
+        if let Some(requirements) = detail.levels[&next_level].requirements {
+            let level_req;
+            if let Some(cur_player_level) = requirements.current_player_level {
+                level_req = format!("Current Level: {}", cur_player_level);
+            } else {
+                level_req = format!("Current Level:-");
+            }
+            ctx.print_color(
+                info_x + 1,
+                requirement_line_y + 1,
+                RGB::named(rltk::WHITE),
+                RGB::named(rltk::BLACK),
+                level_req,
+            );
+
+            let food_req;
+            if let Some(food) = requirements.food {
+                food_req = format!("Food: {}", food);
+            } else {
+                food_req = format!("Food:-");
+            }
+            ctx.print_color(
+                info_x + 1,
+                requirement_line_y + 2,
+                RGB::named(rltk::WHITE),
+                RGB::named(rltk::BLACK),
+                food_req,
+            );
+
+            let wood_req;
+            if let Some(wood) = requirements.wood {
+                wood_req = format!("Wood: {}", wood);
+            } else {
+                wood_req = format!("Wood:-");
+            }
+            ctx.print_color(
+                info_x + 1,
+                requirement_line_y + 3,
+                RGB::named(rltk::WHITE),
+                RGB::named(rltk::BLACK),
+                wood_req,
+            );
+
+            let stone_req;
+            if let Some(stone) = requirements.stone {
+                stone_req = format!("Stone: {}", stone);
+            } else {
+                stone_req = format!("Stone:-");
+            }
+            ctx.print_color(
+                info_x + 1,
+                requirement_line_y + 4,
+                RGB::named(rltk::WHITE),
+                RGB::named(rltk::BLACK),
+                stone_req,
+            );
+        }
     }
 }
