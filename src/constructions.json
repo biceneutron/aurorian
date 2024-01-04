@@ -7,6 +7,7 @@
             "fg": "GOLD2",
             "bg": "BLACK",
             "glyph": "☼",
+            "resource_type": "Food",
             "levels": {
                 "0": {
                     "rate": 2
@@ -27,35 +28,20 @@
             "fg": "LIME",
             "bg": "BLACK",
             "glyph": "o",
+            "resource_type": "Food",
             "levels": {
                 "0": {
-                    "rate": 5
-                },
-                "1": {
-                    "rate": 8,
+                    "rate": 5,
                     "requirements": {
                         "current_building_level": 0,
                         "food": 100
                     }
-                }
-            }
-        },
-        {
-            "name": "Army",
-            "width": 10,
-            "height": 10,
-            "fg": "RED",
-            "bg": "BLACK",
-            "glyph": "x",
-            "levels": {
-                "0": {
-                    "rate": 1
                 },
                 "1": {
                     "rate": 8,
                     "requirements": {
                         "current_building_level": 0,
-                        "food": 100
+                        "food": 1000
                     }
                 }
             }
@@ -67,15 +53,16 @@
             "fg": "GOLD2",
             "bg": "BLACK",
             "glyph": "╣",
+            "resource_type": "Wood",
             "levels": {
                 "0": {
                     "rate": 2
                 },
                 "1": {
-                    "rate": 8,
+                    "rate": 15,
                     "requirements": {
                         "current_building_level": 0,
-                        "food": 100
+                        "wood": 150
                     }
                 }
             }
@@ -87,15 +74,16 @@
             "fg": "GOLD2",
             "bg": "BLACK",
             "glyph": "■",
+            "resource_type": "Stone",
             "levels": {
                 "0": {
                     "rate": 2
                 },
                 "1": {
-                    "rate": 8,
+                    "rate": 10,
                     "requirements": {
                         "current_building_level": 0,
-                        "food": 100
+                        "stone": 80
                     }
                 }
             }

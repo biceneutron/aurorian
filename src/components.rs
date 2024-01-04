@@ -5,7 +5,7 @@ use specs::prelude::*;
 use specs::saveload::{ConvertSaveload, Marker};
 use specs_derive::*;
 
-use super::Rect;
+use super::{Rect, ResourceType};
 
 #[derive(Component, ConvertSaveload)]
 pub struct Renderable {
@@ -39,13 +39,6 @@ pub struct ResourceInfo {
     pub amount: i32,
     pub max_amount: i32,
     pub rate: i32, // per sec
-}
-
-#[derive(PartialEq, Serialize, Deserialize, Copy, Clone)]
-pub enum ResourceType {
-    Food,
-    Stone,
-    Wood,
 }
 
 #[derive(Component, ConvertSaveload)]

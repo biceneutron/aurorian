@@ -5,8 +5,8 @@ use specs::prelude::*;
 use crate::{BuildingDetail, ConstructionManifest, MAP_COUNT, MAP_WIDTH};
 
 use super::{
-    components::*, Map, Rect, RunState, State, MAP_HEIGHT, MAP_PADDING_BOTTOM, MAP_PADDING_LEFT,
-    MAP_PADDING_UP, WINDOW_HEIGHT, WINDOW_WIDTH,
+    components::*, Map, Rect, ResourceType, RunState, State, MAP_HEIGHT, MAP_PADDING_BOTTOM,
+    MAP_PADDING_LEFT, MAP_PADDING_UP, WINDOW_HEIGHT, WINDOW_WIDTH,
 };
 use std::cmp::{max, min};
 
@@ -101,6 +101,16 @@ pub fn draw_construction_menu(ecs: &mut World, ctx: &mut Rltk) -> ConstructionMe
             RGB::named(rltk::WHITE),
             RGB::named(rltk::BLACK),
         );
+
+        let separate_vertical_line_x = CONSTRUCTION_MENU_X as i32 + 50;
+        ctx.draw_box(
+            separate_vertical_line_x,
+            CONSTRUCTION_MENU_Y,
+            0,
+            CONSTRUCTION_MENU_HEIGHT,
+            RGB::named(rltk::WHITE),
+            RGB::named(rltk::BLACK),
+        );
         ctx.print_color(
             CONSTRUCTION_MENU_X + 1,
             CONSTRUCTION_MENU_Y,
@@ -128,14 +138,22 @@ pub fn draw_construction_menu(ecs: &mut World, ctx: &mut Rltk) -> ConstructionMe
         }
 
         // draw construction options
-        for (idx, building) in construction_manifest.buildings.iter().enumerate() {
+        for (idx, detail) in construction_manifest.buildings.iter().enumerate() {
             if selected_idx == idx {
                 ctx.print_color(
                     CONSTRUCTION_MENU_X + 2,
                     CONSTRUCTION_MENU_Y + 2 + idx,
                     RGB::named(rltk::MAGENTA),
                     RGB::named(rltk::BLACK),
-                    &building.name,
+                    &detail.name,
+                );
+
+                print_building_requirements(
+                    ctx,
+                    detail,
+                    0,
+                    separate_vertical_line_x + 1,
+                    CONSTRUCTION_MENU_Y as i32 + 2,
                 );
             } else {
                 ctx.print_color(
@@ -143,7 +161,7 @@ pub fn draw_construction_menu(ecs: &mut World, ctx: &mut Rltk) -> ConstructionMe
                     CONSTRUCTION_MENU_Y + 2 + idx,
                     RGB::named(rltk::WHITE),
                     RGB::named(rltk::BLACK),
-                    &building.name,
+                    &detail.name,
                 );
             }
         }
@@ -536,71 +554,113 @@ fn draw_construction_info(
             RGB::named(rltk::WHITE),
             RGB::named(rltk::BLACK),
         );
-        if let Some(rate) = detail.levels[&next_level].rate {
-            ctx.print_color(
-                info_x + 1,
-                requirement_line_y,
-                RGB::named(rltk::WHITE),
-                RGB::named(rltk::BLACK),
-                format!("Next Level:+{}/sec", rate),
+
+        print_building_requirements(ctx, detail, next_level, info_x + 1, requirement_line_y);
+    }
+}
+
+fn print_building_requirements(
+    ctx: &mut Rltk,
+    detail: &BuildingDetail,
+    next_level: i32,
+    x: i32,
+    y: i32,
+) {
+    let mut y_offset = 0;
+
+    if let Some(rate) = detail.levels[&next_level].rate {
+        let info;
+        if next_level == 0 {
+            info = format!(
+                "Generates {:?} at the rate +{} / sec.",
+                detail.resource_type.unwrap(),
+                rate
             );
+        } else {
+            info = format!("Next Level:+{}/sec", rate);
         }
-        if let Some(requirements) = detail.levels[&next_level].requirements {
-            let level_req;
-            if let Some(cur_player_level) = requirements.current_player_level {
-                level_req = format!("Current Level: {}", cur_player_level);
-            } else {
-                level_req = format!("Current Level:-");
-            }
-            ctx.print_color(
-                info_x + 1,
-                requirement_line_y + 1,
-                RGB::named(rltk::WHITE),
-                RGB::named(rltk::BLACK),
-                level_req,
-            );
 
-            let food_req;
-            if let Some(food) = requirements.food {
-                food_req = format!("Food: {}", food);
-            } else {
-                food_req = format!("Food:-");
-            }
-            ctx.print_color(
-                info_x + 1,
-                requirement_line_y + 2,
-                RGB::named(rltk::WHITE),
-                RGB::named(rltk::BLACK),
-                food_req,
-            );
+        ctx.print_color(
+            x,
+            y + y_offset,
+            RGB::named(rltk::WHITE),
+            RGB::named(rltk::BLACK),
+            info,
+        );
+        y_offset += 1;
+    }
 
-            let wood_req;
-            if let Some(wood) = requirements.wood {
-                wood_req = format!("Wood: {}", wood);
-            } else {
-                wood_req = format!("Wood:-");
-            }
+    if let Some(requirements) = detail.levels[&next_level].requirements {
+        if next_level == 0 {
+            y_offset += 1;
             ctx.print_color(
-                info_x + 1,
-                requirement_line_y + 3,
+                x,
+                y + y_offset,
                 RGB::named(rltk::WHITE),
                 RGB::named(rltk::BLACK),
-                wood_req,
+                "Requirements:",
             );
-
-            let stone_req;
-            if let Some(stone) = requirements.stone {
-                stone_req = format!("Stone: {}", stone);
-            } else {
-                stone_req = format!("Stone:-");
-            }
-            ctx.print_color(
-                info_x + 1,
-                requirement_line_y + 4,
-                RGB::named(rltk::WHITE),
-                RGB::named(rltk::BLACK),
-                stone_req,
-            );
+            y_offset += 1;
         }
+
+        let level_req;
+        if let Some(cur_player_level) = requirements.current_player_level {
+            level_req = format!("Player Level: {}", cur_player_level);
+        } else {
+            level_req = format!("Player Level:-");
+        }
+        ctx.print_color(
+            x,
+            y + y_offset,
+            RGB::named(rltk::WHITE),
+            RGB::named(rltk::BLACK),
+            level_req,
+        );
+        y_offset += 1;
+
+        let food_req;
+        if let Some(food) = requirements.food {
+            food_req = format!("Food: {}", food);
+        } else {
+            food_req = format!("Food:-");
+        }
+        ctx.print_color(
+            x,
+            y + y_offset,
+            RGB::named(rltk::WHITE),
+            RGB::named(rltk::BLACK),
+            food_req,
+        );
+        y_offset += 1;
+
+        let wood_req;
+        if let Some(wood) = requirements.wood {
+            wood_req = format!("Wood: {}", wood);
+        } else {
+            wood_req = format!("Wood:-");
+        }
+        ctx.print_color(
+            x,
+            y + y_offset,
+            RGB::named(rltk::WHITE),
+            RGB::named(rltk::BLACK),
+            wood_req,
+        );
+        y_offset += 1;
+
+        let stone_req;
+        if let Some(stone) = requirements.stone {
+            stone_req = format!("Stone: {}", stone);
+        } else {
+            stone_req = format!("Stone:-");
+        }
+        ctx.print_color(
+            x,
+            y + y_offset,
+            RGB::named(rltk::WHITE),
+            RGB::named(rltk::BLACK),
+            stone_req,
+        );
+        y_offset += 1;
     }
 }

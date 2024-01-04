@@ -1,6 +1,6 @@
 use crate::{BuildingDetail, ConstructionManifest};
 
-use super::{components::*, utils, Map, Rect, State};
+use super::{components::*, Map, Rect, ResourceType};
 use rltk::{RandomNumberGenerator, RGB};
 use specs::{
     prelude::*,

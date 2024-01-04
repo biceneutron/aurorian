@@ -12,7 +12,7 @@ use crate::map::Map;
 use rand::Rng;
 
 // serde
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use std::error::Error;
 use std::fs::File;
@@ -156,6 +156,7 @@ pub struct BuildingDetail {
     pub fg: String,
     pub bg: String,
     pub glyph: char,
+    pub resource_type: Option<ResourceType>,
     pub levels: HashMap<i32, LevelDetail>,
 }
 
@@ -172,6 +173,13 @@ pub struct ConstructionRequirment {
     pub food: Option<i32>,
     pub wood: Option<i32>,
     pub stone: Option<i32>,
+}
+
+#[derive(PartialEq, Serialize, Deserialize, Copy, Clone, Debug)]
+pub enum ResourceType {
+    Food,
+    Stone,
+    Wood,
 }
 
 fn main() -> rltk::BError {
