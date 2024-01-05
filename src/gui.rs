@@ -89,10 +89,13 @@ pub enum ConstructionMenuResult {
 }
 
 pub fn draw_construction_menu(ecs: &mut World, ctx: &mut Rltk) -> ConstructionMenuResult {
-    let construction_manifest = ecs.fetch::<ConstructionManifest>();
-
     let runstate = *ecs.fetch::<RunState>();
     if let RunState::ConstructionMenu { mut selected_idx } = runstate {
+        let construction_manifest = ecs.fetch::<ConstructionManifest>();
+        let player = *ecs.fetch::<Entity>();
+        let stats_storage = ecs.read_storage::<PlayerStats>();
+        let player_stats = stats_storage.get(player).unwrap();
+
         ctx.draw_box(
             CONSTRUCTION_MENU_X,
             CONSTRUCTION_MENU_Y,
@@ -150,6 +153,7 @@ pub fn draw_construction_menu(ecs: &mut World, ctx: &mut Rltk) -> ConstructionMe
 
                 print_building_requirements(
                     ctx,
+                    player_stats,
                     detail,
                     0,
                     separate_vertical_line_x + 1,
@@ -316,6 +320,9 @@ pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> Construct
         let generator_storage = ecs.read_storage::<Generator>();
         let entities = ecs.entities();
         let building_manifest = ecs.fetch::<ConstructionManifest>();
+        let player = *ecs.fetch::<Entity>();
+        let stats_storage = ecs.read_storage::<PlayerStats>();
+        let player_stats = stats_storage.get(player).unwrap();
         for (building, name, entity) in (&building_storage, &name_storage, &entities).join() {
             if x == building.rect.x1 && y == building.rect.y1 {
                 // draw the spot
@@ -335,6 +342,7 @@ pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> Construct
                 let generator = generator_storage.get(entity);
                 draw_construction_info(
                     ctx,
+                    &player_stats,
                     building,
                     name,
                     generator,
@@ -443,6 +451,7 @@ pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> Construct
 
 fn draw_construction_info(
     ctx: &mut Rltk,
+    player_stats: &PlayerStats,
     building: &Building,
     name: &Name,
     generator: Option<&Generator>,
@@ -555,12 +564,20 @@ fn draw_construction_info(
             RGB::named(rltk::BLACK),
         );
 
-        print_building_requirements(ctx, detail, next_level, info_x + 1, requirement_line_y);
+        print_building_requirements(
+            ctx,
+            player_stats,
+            detail,
+            next_level,
+            info_x + 1,
+            requirement_line_y,
+        );
     }
 }
 
 fn print_building_requirements(
     ctx: &mut Rltk,
+    player_stats: &PlayerStats,
     detail: &BuildingDetail,
     next_level: i32,
     x: i32,
@@ -568,6 +585,7 @@ fn print_building_requirements(
 ) {
     let mut y_offset = 0;
 
+    // next level info
     if let Some(rate) = detail.levels[&next_level].rate {
         let info;
         if next_level == 0 {
@@ -590,6 +608,7 @@ fn print_building_requirements(
         y_offset += 1;
     }
 
+    // requirements
     if let Some(requirements) = detail.levels[&next_level].requirements {
         if next_level == 0 {
             y_offset += 1;
@@ -604,63 +623,56 @@ fn print_building_requirements(
         }
 
         let level_req;
+        let mut color = RGB::named(rltk::WHITE);
         if let Some(cur_player_level) = requirements.current_player_level {
             level_req = format!("Player Level: {}", cur_player_level);
+
+            // #TODO
+            // check the current player level and decide the color
+            //
         } else {
             level_req = format!("Player Level:-");
         }
-        ctx.print_color(
-            x,
-            y + y_offset,
-            RGB::named(rltk::WHITE),
-            RGB::named(rltk::BLACK),
-            level_req,
-        );
+        ctx.print_color(x, y + y_offset, color, RGB::named(rltk::BLACK), level_req);
         y_offset += 1;
 
         let food_req;
+        color = RGB::named(rltk::WHITE);
         if let Some(food) = requirements.food {
             food_req = format!("Food: {}", food);
+            if player_stats.food.amount < food {
+                color = RGB::named(rltk::RED);
+            }
         } else {
             food_req = format!("Food:-");
         }
-        ctx.print_color(
-            x,
-            y + y_offset,
-            RGB::named(rltk::WHITE),
-            RGB::named(rltk::BLACK),
-            food_req,
-        );
+        ctx.print_color(x, y + y_offset, color, RGB::named(rltk::BLACK), food_req);
         y_offset += 1;
 
         let wood_req;
+        color = RGB::named(rltk::WHITE);
         if let Some(wood) = requirements.wood {
             wood_req = format!("Wood: {}", wood);
+            if player_stats.wood.amount < wood {
+                color = RGB::named(rltk::RED);
+            }
         } else {
             wood_req = format!("Wood:-");
         }
-        ctx.print_color(
-            x,
-            y + y_offset,
-            RGB::named(rltk::WHITE),
-            RGB::named(rltk::BLACK),
-            wood_req,
-        );
+        ctx.print_color(x, y + y_offset, color, RGB::named(rltk::BLACK), wood_req);
         y_offset += 1;
 
         let stone_req;
+        color = RGB::named(rltk::WHITE);
         if let Some(stone) = requirements.stone {
             stone_req = format!("Stone: {}", stone);
+            if player_stats.stone.amount < stone {
+                color = RGB::named(rltk::RED);
+            }
         } else {
             stone_req = format!("Stone:-");
         }
-        ctx.print_color(
-            x,
-            y + y_offset,
-            RGB::named(rltk::WHITE),
-            RGB::named(rltk::BLACK),
-            stone_req,
-        );
+        ctx.print_color(x, y + y_offset, color, RGB::named(rltk::BLACK), stone_req);
         y_offset += 1;
     }
 }
