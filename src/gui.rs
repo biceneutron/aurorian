@@ -2,7 +2,7 @@ use rltk::{Console, Point, Rltk, VirtualKeyCode, RGB};
 use serde::de;
 use specs::prelude::*;
 
-use crate::{BuildingDetail, ConstructionManifest, MAP_COUNT, MAP_WIDTH};
+use crate::{utils, BuildingDetail, ConstructionManifest, MAP_COUNT, MAP_WIDTH};
 
 use super::{
     components::*, Map, Rect, ResourceType, RunState, State, MAP_HEIGHT, MAP_PADDING_BOTTOM,
@@ -641,7 +641,7 @@ fn print_building_requirements(
         if let Some(food) = requirements.food {
             food_req = format!("Food: {}", food);
             if player_stats.food.amount < food {
-                color = RGB::named(rltk::RED);
+                color = *utils::MORANDI_RED;
             }
         } else {
             food_req = format!("Food:-");

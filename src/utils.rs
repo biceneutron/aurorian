@@ -5,16 +5,9 @@ use specs::prelude::*;
 use specs::saveload::{ConvertSaveload, Marker};
 use specs_derive::*;
 
+use lazy_static::lazy_static;
 use std::error::Error;
 
-pub fn str_to_rgb(color: &str) -> Option<RGB> {
-    let result = match color {
-        "GOLD2" => Some(RGB::named(rltk::GOLD2)),
-        "LIME" => Some(RGB::named(rltk::LIME)),
-        "RED" => Some(RGB::named(rltk::RED)),
-        "BLACK" => Some(RGB::named(rltk::BLACK)),
-        _ => None,
-    };
-
-    result
+lazy_static! {
+    pub static ref MORANDI_RED: RGB = RGB::from_u8(185, 87, 86);
 }

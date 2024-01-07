@@ -78,6 +78,7 @@ name = "aurorian"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "lazy_static",
  "rand",
  "rltk",
  "serde",
