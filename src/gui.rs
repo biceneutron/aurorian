@@ -171,11 +171,20 @@ pub fn draw_construction_menu(ecs: &mut World, ctx: &mut Rltk) -> ConstructionMe
         }
 
         // control
+        let construction_manifest = ecs.fetch::<ConstructionManifest>();
+        let detail = &construction_manifest.buildings[selected_idx];
         match ctx.key {
             None => return ConstructionMenuResult::NoSelection { selected_idx },
             Some(key) => match key {
                 VirtualKeyCode::Escape => return ConstructionMenuResult::Escape,
-                VirtualKeyCode::Return => return ConstructionMenuResult::Selected { selected_idx },
+                VirtualKeyCode::Return => {
+                    // #TODO requirements check
+                    if utils::requirements_check(player_stats, None, detail, 0) {
+                        return ConstructionMenuResult::Selected { selected_idx };
+                    }
+
+                    return ConstructionMenuResult::NoSelection { selected_idx };
+                }
                 VirtualKeyCode::K => {
                     if selected_idx == 0 {
                         selected_idx = construction_manifest.buildings.len() - 1;
@@ -315,15 +324,15 @@ pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> Construct
             (x, y) = map.idx_xy(idx);
         }
 
-        let building_storage = ecs.read_storage::<Building>();
+        let mut building_storage = ecs.write_storage::<Building>();
         let name_storage = ecs.read_storage::<Name>();
-        let generator_storage = ecs.read_storage::<Generator>();
+        let mut generator_storage = ecs.write_storage::<Generator>();
         let entities = ecs.entities();
         let building_manifest = ecs.fetch::<ConstructionManifest>();
         let player = *ecs.fetch::<Entity>();
-        let stats_storage = ecs.read_storage::<PlayerStats>();
-        let player_stats = stats_storage.get(player).unwrap();
-        for (building, name, entity) in (&building_storage, &name_storage, &entities).join() {
+        let mut stats_storage = ecs.write_storage::<PlayerStats>();
+        let player_stats = stats_storage.get_mut(player).unwrap();
+        for (building, name, entity) in (&mut building_storage, &name_storage, &entities).join() {
             if x == building.rect.x1 && y == building.rect.y1 {
                 // draw the spot
                 for i in building.rect.y1..building.rect.y2 {
@@ -339,10 +348,10 @@ pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> Construct
                         detail = Some(b);
                     }
                 }
-                let generator = generator_storage.get(entity);
+                let generator = generator_storage.get_mut(entity);
                 draw_construction_info(
                     ctx,
-                    &player_stats,
+                    player_stats,
                     building,
                     name,
                     generator,
@@ -451,10 +460,10 @@ pub fn draw_construction_selecting(ecs: &mut World, ctx: &mut Rltk) -> Construct
 
 fn draw_construction_info(
     ctx: &mut Rltk,
-    player_stats: &PlayerStats,
-    building: &Building,
+    player_stats: &mut PlayerStats,
+    building: &mut Building,
     name: &Name,
-    generator: Option<&Generator>,
+    generator: Option<&mut Generator>,
     detail: &BuildingDetail,
 ) {
     let mut info_x = building.rect.x2;
@@ -503,7 +512,7 @@ fn draw_construction_info(
     );
 
     // rate
-    if let Some(gen) = generator {
+    if let Some(gen) = generator.as_ref() {
         let rate_info;
         match gen.resource_type {
             ResourceType::Food => {
@@ -527,6 +536,7 @@ fn draw_construction_info(
     }
 
     // actions
+    let next_level = building.level + 1;
     let action_line_y = info_y + CONSTRUCTION_INFO_HEIGHT as i32 - 3;
     ctx.draw_hollow_box(
         info_x,
@@ -536,13 +546,15 @@ fn draw_construction_info(
         RGB::named(rltk::WHITE),
         RGB::named(rltk::BLACK),
     );
-    ctx.print_color(
-        info_x + 1,
-        action_line_y + 1,
-        RGB::named(rltk::WHITE),
-        RGB::named(rltk::BLACK),
-        format!("[u] Upgrade"),
-    );
+    if next_level < detail.levels.len() as i32 {
+        ctx.print_color(
+            info_x + 1,
+            action_line_y + 1,
+            RGB::named(rltk::WHITE),
+            RGB::named(rltk::BLACK),
+            format!("[u] Upgrade"),
+        );
+    }
     ctx.print_color(
         info_x + 1,
         action_line_y + 2,
@@ -552,7 +564,6 @@ fn draw_construction_info(
     );
 
     // upgrade requirements
-    let next_level = building.level + 1;
     if next_level < detail.levels.len() as i32 {
         let requirement_line_y = action_line_y - 5;
         ctx.draw_hollow_box(
@@ -572,6 +583,24 @@ fn draw_construction_info(
             info_x + 1,
             requirement_line_y,
         );
+    }
+
+    // player control
+    match ctx.key {
+        Some(key) => match key {
+            VirtualKeyCode::U => {
+                // upgrade
+                if utils::requirements_check(player_stats, Some(building), detail, next_level) {
+                    utils::consume_resource(player_stats, detail, next_level);
+                    utils::upgrade_building(detail, building, generator, next_level);
+                }
+            }
+            VirtualKeyCode::T => {
+                // tear down
+            }
+            _ => {}
+        },
+        None => {}
     }
 }
 

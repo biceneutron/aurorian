@@ -109,6 +109,14 @@ impl GameState for State {
                     gui::ConstructionSpotSelectingResult::Selected { selected_idx, x, y } => {
                         let (detail, spawner_fn) =
                             spawner::get_spawner(&mut self.ecs, selected_idx);
+
+                        {
+                            let player = *self.ecs.fetch::<Entity>();
+                            let mut stats_storage = self.ecs.write_storage::<PlayerStats>();
+                            let player_stats = stats_storage.get_mut(player).unwrap();
+                            utils::consume_resource(player_stats, &detail, 0);
+                        }
+
                         spawner_fn(&mut self.ecs, detail, x, y);
                         new_runstate = RunState::Idle
                     }
@@ -200,7 +208,7 @@ fn main() -> rltk::BError {
 
     // create player
     let current: DateTime<Local> = Local::now();
-    let player_stats = gs
+    let player = gs
         .ecs
         .create_entity()
         .with(PlayerStats {
@@ -244,7 +252,7 @@ fn main() -> rltk::BError {
 
     gs.ecs.insert(construction_manifest);
     gs.ecs.insert(map);
-    gs.ecs.insert(player_stats);
+    gs.ecs.insert(player);
     gs.ecs.insert(RunState::PreRun);
     gs.ecs.insert(rltk::RandomNumberGenerator::new());
 

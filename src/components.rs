@@ -41,7 +41,7 @@ pub struct ResourceInfo {
     pub rate: i32, // per sec
 }
 
-#[derive(Component, ConvertSaveload)]
+#[derive(Component, Copy, Clone, ConvertSaveload)]
 pub struct Generator {
     pub rate: i32, // per sec
     pub resource_type: ResourceType,

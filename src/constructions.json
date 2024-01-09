@@ -33,7 +33,6 @@
                 "0": {
                     "rate": 5,
                     "requirements": {
-                        "current_building_level": 0,
                         "food": 100
                     }
                 },
